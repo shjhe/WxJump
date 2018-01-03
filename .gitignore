@@ -1,0 +1,11 @@
+*.iml
+.DS_Store
+node_modules/
+src/styles/element-theme/node_modules/
+dist/
+npm-debug.log
+test/unit/coverage
+test/e2e/reports
+selenium-debug.log
+.idea/
+.vscode/
