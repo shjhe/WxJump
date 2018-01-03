@@ -1,13 +1,12 @@
-var getPixels = require("get-pixels")
-var images = require("images");
-var shell = require('shelljs');
-// var img = images('./1.png')
-// // for (var key in img) {
-// //   console.log(key)
-// // }
-// console.log(img.toBuffer())
+const {
+  IMG_NAME,
+  LOCAL_IMG_PATH
+} = require("./config/constant")
+const getPixels = require("get-pixels")
+const images = require("images");
+let shell = require('shelljs');
 let get_center_point = (img, callback) => {
-  getPixels("1.png", function(err, pixels) {
+  getPixels(LOCAL_IMG_PATH + IMG_NAME, function(err, pixels) {
     if(err) {
       console.log("Bad image path")
       return
@@ -18,12 +17,12 @@ let get_center_point = (img, callback) => {
 }
 
 let find_poit = (pixels, img) => {
-  var piece_x_sum = 0,
+  let piece_x_sum = 0,
       piece_x_c = 0,
       piece_y_max = 0,
       board_x = 0,
       board_y = 0;
-  var { width, height } = img.size()
+  let { width, height } = img.size()
   for(var y = 0; y < height; y++) {
     for(var x = 0; x < width; x ++) {
       var pixel0 = pixels.get(x, y, 0),
@@ -85,9 +84,9 @@ let find_poit = (pixels, img) => {
 let upload_phone_img = () => {
   return new Promise((resolve) => {
     console.info('>>>>>>>>>>>截取图片')
-    shell.exec('adb shell screencap -p /sdcard/1.png', () => {
+    shell.exec(`adb shell screencap -p /sdcard/${IMG_NAME}`, () => {
       console.info('>>>>>>>>>>>上传图片')
-      shell.exec('adb pull /sdcard/1.png', () => {
+      shell.exec(`adb pull /sdcard/${IMG_NAME}`, () => {
         console.info('>>>>>>>>>>>图片上传完成')
         resolve()
       })
@@ -111,7 +110,7 @@ let getAndroidScreen = () => {
 }
 let androidJump = (distance) => {
   getAndroidScreen().then(({x, y}) => {
-    let config = require(`./config/${x}-1280.json`)
+    let config = require(`./config/screen/${x}-1280.json`)
     press_time = distance * config.press_radio
     press_time = press_time > 200 ? press_time : 200
     press_time = ~~press_time
@@ -126,7 +125,7 @@ let androidJump = (distance) => {
 // 初始化
 function init(img) {
   upload_phone_img().then(() => {
-    let curImg = img("./1.png")
+    let curImg = img(LOCAL_IMG_PATH + IMG_NAME)
     get_center_point(curImg, ([piece_x, piece_y, board_x, board_y]) => {
       curImg.draw(img(8,8).fill(0xff, 0x00, 0x00, 0.5), piece_x, piece_y).save('1.png')
       curImg.draw(img(8,8).fill(0,0,0), board_x, board_x).save('1.png')
