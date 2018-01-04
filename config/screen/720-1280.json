@@ -1,6 +1,7 @@
 {
-  "press_radio": 2.099,
+  "press_radio": 2.15,
   "half_height": 13,
+  "piece_body_width": 47,
   "swipe": {
     "x1": 374,
     "y1": 1060,

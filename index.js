@@ -46,20 +46,22 @@ let find_poit = (pixels, img, config) => {
       piece_y_max = 0,
       board_x = 0,
       board_y = 0;
-  let { width, height } = img.size()
-  let scan_x_border = Math.ceil(width/2) // 扫描棋子时的左右边界
+      let { width, height } = img.size()
+  let scan_x_border = Math.floor(width/8) // 扫描棋子时的左右边界
   let scan_start_y = 0  // 扫描的起始 y 坐标
   // 以 50px 步长，尝试探测 scan_start_y
-  for(let y = Math.ceil(height/3); y < Math.ceil(height*2/3); y+=50) {
+  for(let y = Math.floor(height/3); y < Math.floor(height*2/3); y+=30) {
     let last_pixel0 = pixels.get(0, y, 0);
     let last_pixel1 = pixels.get(0, y, 1);
     let last_pixel2 = pixels.get(0, y, 2);
+    // img.draw(images(16,16).fill(0xff, 0x00, 0x00, 0.5), 12, y).save('2.png')
     for(var x = 1; x < width; x ++) {
       let pixel0 = pixels.get(x, y, 0),
           pixel1 = pixels.get(x, y, 1),
           pixel2 = pixels.get(x, y, 2);
       // 不是纯色的线，则记录 scan_start_y 的值，准备跳出循环
       if (pixel0 != last_pixel0 || pixel1 != last_pixel1 || pixel2 != last_pixel2) {
+        img.draw(images(16,16).fill(0xff, 0x00, 0x00, 0.5), x, y).save('2.png')
         scan_start_y = y - 50
         break
       }
@@ -71,23 +73,24 @@ let find_poit = (pixels, img, config) => {
   console.info(`scan_start_y: ${scan_start_y}`)
 
   // 从 scan_start_y 开始往下扫描，棋子应位于屏幕上半部分，这里暂定不超过 2/3
-  for(let y = scan_start_y; y < Math.ceil(height*2/3); y++) {
+  for(let y = scan_start_y; y < Math.floor(height*2/3); y++) {
       for(let x = scan_x_border; x < (width - scan_x_border); x++){  // 横坐标方面也减少了一部分扫描开销
         let pixel0 = pixels.get(x, y, 0),
             pixel1 = pixels.get(x, y, 1),
             pixel2 = pixels.get(x, y, 2);
         // 根据棋子的最低行的颜色判断，找最后一行那些点的平均值，这个颜色这样应该 OK，暂时不提出来
         if ((50 < pixel0 && pixel0 < 60) && (53 < pixel1 && pixel1 < 63) && (95 < pixel2 && pixel2 < 110)) {
+          // img.draw(images(10,10).fill(0xff, 0x00, 0x00, 0.5), x, y).save('2.png')
           piece_x_sum += x
           piece_x_c += 1
           piece_y_max = y > piece_y_max ? y : piece_y_max
         }
       }
   }
-  if (piece_x_sum || piece_x_c) {
-    return 0, 0, 0, 0
+  if (!piece_x_sum || !piece_x_c) {
+    return [0,0,0,0]
   }
-  piece_x = Math.ceil(piece_x_sum / piece_x_c)
+  piece_x = Math.floor(piece_x_sum / piece_x_c)
   piece_y = piece_y_max - config.half_height  // 上移棋子底盘高度的一半
 
   // 限制棋盘扫描的横坐标，避免音符 bug
@@ -99,7 +102,7 @@ let find_poit = (pixels, img, config) => {
     board_x_end = piece_x
   }
   let cur_y = 0 // 记录本次循环最大值 用作下一次处理
-  for(cur_y = Math.ceil(height/2); cur_y < Math.ceil(height*2/3); cur_y++) {
+  for(cur_y = Math.floor(height/3); cur_y < Math.floor(height*2/3); cur_y++) {
     let last_pixel0 = pixels.get(0, cur_y, 0);
     let last_pixel1 = pixels.get(0, cur_y, 1);
     let last_pixel2 = pixels.get(0, cur_y, 2);
@@ -108,19 +111,20 @@ let find_poit = (pixels, img, config) => {
     }
     board_x_sum = 0
     board_x_c = 0
-    for(let x = Math.ceil(board_x_start); x < Math.ceil(board_x_end);x++) {
-      let pixel0 = pixels.get(x, y, 0),
-          pixel1 = pixels.get(x, y, 1),
-          pixel2 = pixels.get(x, y, 2);
+    for(let x = Math.floor(board_x_start); x < Math.floor(board_x_end);x++) {
+      let pixel0 = pixels.get(x, cur_y, 0),
+          pixel1 = pixels.get(x, cur_y, 1),
+          pixel2 = pixels.get(x, cur_y, 2);
       // 修掉脑袋比下一个小格子还高的情况的 bug
-      if (Math.abs(x - piece_x) < piece_body_width) {
+      if (Math.abs(x - piece_x) < config.piece_body_width) {
         continue
       }
       // 修掉圆顶的时候一条线导致的小 bug，这个颜色判断应该 OK，暂时不提出来
       if (Math.abs(pixel0 - last_pixel0) + Math.abs(pixel1 - last_pixel1) + Math.abs(pixel2 - last_pixel2) > 10){
         board_x_sum += x
         board_x_c += 1
-        img.draw(images(10,10).fill(0xff, 0x00, 0x00, 0.5), x, y).save('2.png')
+        // console.log('2222222222')
+        // img.draw(images(10,10).fill(0xff, 0x00, 0x00, 0.5), x, cur_y).save('2.png')
       }
 
     }
@@ -142,7 +146,7 @@ let find_poit = (pixels, img, config) => {
       break
     }
   }
-  board_y = Math.ceil((cur_y + down_y) / 2)
+  board_y = Math.floor((cur_y + down_y) / 2)
   // 如果上一跳命中中间，则下个目标中心会出现 r245 g245 b245 的点，利用这个属性弥补上一段代码可能存在的判断错误
   // 若上一跳由于某种原因没有跳到正中间，而下一跳恰好有无法正确识别花纹，则有可能游戏失败，由于花纹面积通常比较大，失败概率较低
   for(let i = cur_y; i < cur_y + 200; i++) {
@@ -154,9 +158,11 @@ let find_poit = (pixels, img, config) => {
       break
     }
   }
-  if (board_x || board_y) {
+  if (!board_x || !board_y) {
     return [0,0,0,0]
   }
+  img.draw(images(10,10).fill(0xff, 0x00, 0x00, 0.5), piece_x, piece_y).save('2.png')
+  img.draw(images(10,10).fill(0xff, 0x00, 0x00, 0.5), board_x, board_y).save('2.png')
   return [piece_x, piece_y, board_x, board_y]
 }
 // 获取截图
@@ -172,20 +178,27 @@ let upload_phone_img = () => {
     })
   })
 }
-let androidJump = (distance) => {
+let androidJump = (img, distance, config) => {
   press_time = distance * config.press_radio
   press_time = press_time > 200 ? press_time : 200
   press_time = ~~press_time
   // TODO: 坐标根据截图的 size 来计算
-  let { x1, x2, y1, y2 } = config.swipe
-  let cmd = `adb shell input swipe ${x1} ${y1} ${x2} ${y2} ${press_time}`
+  // let { x1, x2, y1, y2 } = config.swipe
+  // let cmd = `adb shell input swipe ${x1} ${y1} ${x2} ${y2} ${press_time}`
+  let { width, height } = img.size()
+  let left = Math.floor(width / 2)
+  let top = Math.floor(1584 * (height / 1920.0))
+  left = Math.floor(Math.random()*100 + left - 50)
+  top = Math.floor(Math.random()*20 + top - 20)
+  let cmd = `adb shell input swipe ${left} ${top} ${left} ${top} ${press_time}`
+  img.draw(images(16,16).fill(0xff, 0x00, 0x00, 0.5), left, top).save('2.png')
   console.info(`>>>>>>>>>>>>>>>${cmd}`)
   shell.exec(cmd)
 }
 
 // 初始化
 function init(img) {
-  // upload_phone_img().then(() => {
+  upload_phone_img().then(() => {
     let curImg = img(LOCAL_IMG_PATH + IMG_NAME)
     getAndroidScreen().then((screen) => {
       let config = require(`./config/screen/${screen.x}-${screen.y}.json`)
@@ -193,13 +206,13 @@ function init(img) {
         // curImg.draw(img(8,8).fill(0xff, 0x00, 0x00, 0.5), piece_x, piece_y).save('1.png')
         // curImg.draw(img(8,8).fill(0,0,0), board_x, board_x).save('1.png')
         console.log(piece_x, piece_y, board_x, board_x)
-        // androidJump(Math.sqrt(Math.abs(board_x - piece_x) ** 2 + Math.abs(board_y - piece_y) ** 2), config)
-        // setTimeout(() => {
-        //   init(img)
-        // }, 3500)
+        androidJump(curImg, Math.sqrt(Math.abs(board_x - piece_x) ** 2 + Math.abs(board_y - piece_y) ** 2), config)
+        setTimeout(() => {
+          init(img)
+        }, 3500)
       })
     })
-  // })
+  })
 }
 init(images)
 // function TylerJump() {
