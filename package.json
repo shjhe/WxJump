@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "get-pixels": "^3.3.0",
+    "images": "^3.0.1",
     "shelljs": "^0.7.8"
   }
 }
